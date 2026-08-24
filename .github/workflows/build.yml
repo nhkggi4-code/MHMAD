@@ -19,7 +19,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Unzip & Fix Directory
+    - name: Unzip & Prepare Clean Project
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
         find . -maxdepth 1 -name "*.zip" -exec unzip -o {} \;
@@ -31,17 +31,28 @@ jobs:
         fi
 
         SRC_DIR=$(dirname "$SETTINGS_FILE")
+        
+        # نقل الملفات إلى مجلد مسار نظيف بدون مسافات أو حروف عربية
         mkdir -p project_clean
         cp -r "$SRC_DIR"/* project_clean/ 2>/dev/null || true
         cp -r "$SRC_DIR"/.* project_clean/ 2>/dev/null || true
 
-    - name: Clear Cache & Build APK
+    - name: Build APK (Fix BouncyCastle & Cache Lock)
+      env:
+        GRADLE_USER_HOME: ${{ github.workspace }}/.gradle_home
       run: |
-        rm -rf ~/.gradle/caches/
         cd project_clean
+        
+        # إنشاء Wrapper إصدار 8.2
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon --no-configuration-cache
+        
+        # بناء التطبيق مع تعطيل المعالجة المتوازية لمنع تعارض ملفات Jar
+        ./gradlew assembleDebug \
+          --no-daemon \
+          --no-configuration-cache \
+          -Dorg.gradle.parallel=false \
+          -Dorg.gradle.vfs.watch=false
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
