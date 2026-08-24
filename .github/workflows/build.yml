@@ -19,26 +19,29 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
-    - name: Unzip Project
+    - name: Unzip & Fix Directory
       run: |
         sudo apt-get update && sudo apt-get install -y unzip
         find . -maxdepth 1 -name "*.zip" -exec unzip -o {} \;
 
-    - name: Generate Gradlew & Build APK
-      run: |
         SETTINGS_FILE=$(find . -name "settings.gradle*" | head -n 1)
         if [ -z "$SETTINGS_FILE" ]; then
           echo "ERROR: settings.gradle not found!"
           exit 1
         fi
-        ROOT_DIR=$(dirname "$SETTINGS_FILE")
-        cd "$ROOT_DIR"
+
+        SRC_DIR=$(dirname "$SETTINGS_FILE")
+        mkdir -p project_clean
+        cp -r "$SRC_DIR"/* project_clean/ 2>/dev/null || true
+        cp -r "$SRC_DIR"/.* project_clean/ 2>/dev/null || true
+
+    - name: Clear Cache & Build APK
+      run: |
+        rm -rf ~/.gradle/caches/
+        cd project_clean
         gradle wrapper --gradle-version 8.2
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --no-daemon --no-configuration-cache
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
