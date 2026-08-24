@@ -29,13 +29,14 @@ jobs:
 
     - name: Generate Gradlew & Build APK
       run: |
-        BUILD_DIR=$(find . -name "build.gradle*" -printf "%h\n" | head -n 1)
-        if [ -z "$BUILD_DIR" ]; then
-          echo "ERROR: build.gradle file not found!"
+        SETTINGS_FILE=$(find . -name "settings.gradle*" | head -n 1)
+        if [ -z "$SETTINGS_FILE" ]; then
+          echo "ERROR: settings.gradle not found!"
           exit 1
         fi
-        cd "$BUILD_DIR"
-        gradle wrapper
+        ROOT_DIR=$(dirname "$SETTINGS_FILE")
+        cd "$ROOT_DIR"
+        gradle wrapper --gradle-version 8.2
         chmod +x gradlew
         ./gradlew assembleDebug
 
@@ -44,4 +45,3 @@ jobs:
       with:
         name: App-APK
         path: "**/build/outputs/apk/debug/*.apk"
-
