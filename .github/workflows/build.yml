@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK Final
 
 on:
   push:
@@ -31,28 +31,18 @@ jobs:
         fi
 
         SRC_DIR=$(dirname "$SETTINGS_FILE")
-        
-        # نقل الملفات إلى مجلد مسار نظيف بدون مسافات أو حروف عربية
         mkdir -p project_clean
         cp -r "$SRC_DIR"/* project_clean/ 2>/dev/null || true
         cp -r "$SRC_DIR"/.* project_clean/ 2>/dev/null || true
 
-    - name: Build APK (Fix BouncyCastle & Cache Lock)
-      env:
-        GRADLE_USER_HOME: ${{ github.workspace }}/.gradle_home
+    - name: Nuclear Clean & Build APK
       run: |
+        # مسح الكاش من جذوره
+        rm -rf ~/.gradle/caches/
         cd project_clean
         
-        # إنشاء Wrapper إصدار 8.2
-        gradle wrapper --gradle-version 8.2
-        chmod +x gradlew
-        
-        # بناء التطبيق مع تعطيل المعالجة المتوازية لمنع تعارض ملفات Jar
-        ./gradlew assembleDebug \
-          --no-daemon \
-          --no-configuration-cache \
-          -Dorg.gradle.parallel=false \
-          -Dorg.gradle.vfs.watch=false
+        # بناء التطبيق مع فرض تحميل جديد ومنع التوازي
+        gradle assembleDebug --no-daemon --no-build-cache --no-configuration-cache --refresh-dependencies --max-workers=1
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
